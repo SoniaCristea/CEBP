@@ -30,7 +30,7 @@ public class ConnectionToServer {
 			public void run() {
 				while (true) {
 					try {
-						Object message = in.readObject();
+						Message message = (Message) in.readObject();
 
 						Client.messages.put(message);
 
@@ -46,9 +46,9 @@ public class ConnectionToServer {
 
 	}
 
-	public void write(Object msg) throws IOException {
+	public void write(Message msg) throws IOException {
 		out.flush();
-		out.writeObject(msg.toString());
+		out.writeObject(msg);
 
 	}
 }

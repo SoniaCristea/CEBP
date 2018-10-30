@@ -31,7 +31,7 @@ public class ClientToServer {
 			public void run() {
 				while (true) {
 					try {
-						Object message = in.readObject();
+						Message message = (Message) in.readObject();
 						Server.messages.put(message);
 
 					} catch (InterruptedException | IOException | ClassNotFoundException e) {
@@ -46,9 +46,9 @@ public class ClientToServer {
 
 	}
 
-	public void write(Object msg) throws IOException {
-		System.out.println("Message: "+msg+" sent to clients");
-		out.writeObject(msg.toString());
+	public void write(Message msg) throws IOException {
+		System.out.println("Message: "+msg.getContent().toString()+" sent to clients");
+		out.writeObject(msg);
 		out.flush();
 	}
 

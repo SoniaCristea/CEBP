@@ -10,7 +10,7 @@ public class Server {
 
 	ServerSocket serverSocket;
 	private ArrayList<ClientToServer> clients;
-	public static volatile LinkedBlockingQueue<Object> messages;
+	public static volatile LinkedBlockingQueue<Message> messages;
 
 	public Server(int port, int time) {
 
@@ -50,9 +50,7 @@ public class Server {
 					try {
 
 						for (int i = 0; i < messages.size(); i++) {
-							Object msg = messages.take();
-//							System.out.println(msg.toString());
-							
+							Message msg = messages.take();
 							sendToAll(msg);
 						}
 
@@ -69,7 +67,7 @@ public class Server {
 
 	}
 
-	public void sendToAll(Object message) throws IOException {
+	public void sendToAll(Message message) throws IOException {
 		for (ClientToServer index : clients)
 			index.write(message);
 	}

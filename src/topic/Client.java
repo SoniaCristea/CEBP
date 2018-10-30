@@ -10,23 +10,30 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class Client {
 
 	private ConnectionToServer server;
-	protected static volatile LinkedBlockingQueue<Object> messages;
+	protected static volatile LinkedBlockingQueue<Message> messages;
 	private Socket socket;
+	private Object type;
 	
 
-	public Client(String hostName, int port) throws IOException {
+	public Client(String hostName, int port,Object msgType) throws IOException {
 		socket = new Socket(hostName, port);
 		messages = new LinkedBlockingQueue<>();
 		server = new ConnectionToServer(socket);
+		this.type = msgType;
 
 		Thread messageHandling = new Thread() {
 			public void run() {
 				while (true) {
 					try {
-
-						Object message = messages.take();
-						System.out.println(message.toString());
 						
+						Message message = messages.take();
+						
+						if ( !message.getMessageType().equals(type)){
+							messages.put(message);
+							System.out.println("Message not suitable for this client");
+						}
+						System.out.println(message.getContent().toString());
+	
 					} catch (InterruptedException e) {
 					}
 				}
@@ -40,7 +47,7 @@ public class Client {
 		return server;
 	}
 
-	private void sendMsg(Object msg) throws IOException {
+	private void sendMsg(Message msg) throws IOException {
 		server.write(msg);
 	}
 
@@ -53,11 +60,12 @@ public class Client {
 
 		try {
 			BufferedReader buf = new BufferedReader(new InputStreamReader(System.in));
-			Client client1 = new Client(InetAddress.getLocalHost().getHostAddress(), Integer.parseInt(args[0]));
+			Client client1 = new Client(InetAddress.getLocalHost().getHostAddress(), Integer.parseInt(args[0]),String.class);
 			System.out.println("Enter message:  ");
 			while (true) {
-				String mess = "";
-				mess += buf.readLine();
+				String msgCnt = "";
+				 msgCnt += buf.readLine();
+				Message mess = new Message(msgCnt, String.class, 5000);
 				client1.sendMsg(mess);
 			}
 		} catch (NumberFormatException | IOException e) {
