@@ -1,4 +1,5 @@
 package p2p;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -8,65 +9,72 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class Client {
 
-  private ConnectionToServer server;
-  public static volatile LinkedBlockingQueue<Object> messages;
-  private Socket socket;
+	private ConnectionToServer server;
+	public static volatile LinkedBlockingQueue<Object> messages;
+	private Socket socket;
+	protected boolean isRecipient;
 
-  public Client(String hostName, int port, String userName) throws IOException {
-    socket = new Socket(hostName, port);
-    messages = new LinkedBlockingQueue<>();
-    server = new ConnectionToServer(socket, userName);
+	public Client(String hostName, int port, String userName, boolean isRecipient) throws IOException {
+		socket = new Socket(hostName, port);
+		messages = new LinkedBlockingQueue<>();
+		server = new ConnectionToServer(socket, userName);
+		this.isRecipient = isRecipient;
 
-    Thread messageHandling = new Thread() {
-      public void run() {
-        while (true) {
-          try {
+		Thread messageHandling = new Thread() {
+			public void run() {
+				while (true) {
+					try {
 
-            Object message = messages.take();
-            System.out.println(message.toString());
-          } catch (InterruptedException e) {
-          }
-        }
-      }
-    };
+						Object message = messages.take();
+						System.out.println(message.toString());
+					} catch (InterruptedException e) {
+					}
+				}
+			}
+		};
 
-    messageHandling.start();
-  }
+		messageHandling.start();
+	}
 
-  private ConnectionToServer getServer() {
-    return server;
-  }
+	private ConnectionToServer getServer() {
+		return server;
+	}
 
-  private void sendMsg(Object msg) throws IOException {
-    server.write(msg);
-  }
+	private void sendMsg(Object msg) throws IOException {
+		if (isRecipient) {
+			server.write(msg);
+		}else{
+			server.write("Client is not a recipient");
+		}
+	}
 
-  public static void main(String[] args) {
+	public static void main(String[] args) {
 
-    if (args.length < 1) {
-      System.out.println("Not enough arguments");
-      System.exit(-1);
-    }
+		if (args.length < 1) {
+			System.out.println("Not enough arguments");
+			System.exit(-1);
+		}
 
-    try {
-      BufferedReader buf = new BufferedReader(new InputStreamReader(System.in));
-      System.out.println("Enter username of client: ");
-      String userName = buf.readLine();
-      Client client1 = new Client(InetAddress.getLocalHost().getHostAddress(), Integer.parseInt(args[0]), userName);
-      while (true) {
-        String mess = "";
+		try {
+			BufferedReader buf = new BufferedReader(new InputStreamReader(System.in));
+			System.out.println("Enter username of client: ");
+			String userName = buf.readLine();
+			Client client1 = new Client(InetAddress.getLocalHost().getHostAddress(), Integer.parseInt(args[0]),
+					userName, true);
+			while (true) {
+				String mess = "";
 
-        System.out.println("Enter user to send to ");
-        mess += buf.readLine();
-        mess += "||";
-        System.out.println("Enter message:  ");
-        mess += userName + ": "+buf.readLine();
-        client1.sendMsg(mess);
-      }
-    } catch (NumberFormatException | IOException e) {
-      System.out.println(e.getMessage());
-    }
+				System.out.println("Enter user to send to ");
+				mess += buf.readLine();
+				mess += "||";
+				System.out.println("Enter message:  ");
+				mess += userName + ": " + buf.readLine();
+				client1.sendMsg(mess);
+			}
+		} catch (NumberFormatException | IOException e) {
+			System.out.println(e.getMessage());
+		}
 
-  }
+	}
 
 }

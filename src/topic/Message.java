@@ -1,11 +1,12 @@
 package topic;
 
+import java.awt.TrayIcon.MessageType;
 import java.io.Serializable;
 
 public class Message implements Serializable{
 
 	private Object content;
-	private Object type;
+	private MessageTypes type;
 	private int timeout;
 	
 	public Object getContent() {
@@ -19,7 +20,7 @@ public class Message implements Serializable{
 
 	
 	
-	public Message(Object content, Object type, int time) {
+	public Message(Object content, MessageTypes type, int time) {
 		super();
 		this.content = content;
 		this.type = type;

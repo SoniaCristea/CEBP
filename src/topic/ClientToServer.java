@@ -34,7 +34,7 @@ public class ClientToServer {
 						Message message = (Message) in.readObject();
 						Server.messages.put(message);
 
-					} catch (InterruptedException | IOException | ClassNotFoundException e) {
+					} catch (IOException | ClassNotFoundException | InterruptedException e) {
 						System.out.println(e.getMessage());
 					}
 				}
