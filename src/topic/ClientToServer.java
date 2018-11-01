@@ -1,3 +1,4 @@
+
 package topic;
 
 import java.io.IOException;
@@ -8,49 +9,57 @@ import java.net.Socket;
 
 public class ClientToServer {
 
-	private Socket client = null;
-	private ObjectInputStream in = null;
-	private ObjectOutputStream out = null;
+  private Socket client = null;
+  private ObjectInputStream in = null;
+  private ObjectOutputStream out = null;
 
-	public ClientToServer(Socket clientSocket) {
-		client = clientSocket;
+  public ClientToServer(Socket clientSocket) {
+    client = clientSocket;
 
-		try {
-			out = new ObjectOutputStream(client.getOutputStream());
-			out.flush();
-			InputStream inp = client.getInputStream();
-			in = new ObjectInputStream(inp);
+    try {
+      out = new ObjectOutputStream(client.getOutputStream());
+      out.flush();
+      InputStream inp = client.getInputStream();
+      in = new ObjectInputStream(inp);
 
-		} catch (IOException e) {
-			System.out.println("Error in getting I/O stream");
-			System.out.println(e.getMessage());
-		}
+    } catch (IOException e) {
+      System.out.println("Error in getting I/O stream");
+      System.out.println(e.getMessage());
+    }
 
-		Thread read = new Thread() {
+    Thread read = new Thread() {
 
-			public void run() {
-				while (true) {
-					try {
-						Message message = (Message) in.readObject();
-						Server.messages.put(message);
+      public void run() {
 
-					} catch (IOException | ClassNotFoundException | InterruptedException e) {
-						System.out.println(e.getMessage());
-					}
-				}
-			}
+        long startTime = System.currentTimeMillis();
 
-		};
+        while (true) {
+          try {
 
-		read.start();
+            while (System.currentTimeMillis() - startTime <= Server.timeout) {
 
-	}
+              Message message = (Message) in.readObject();
+              Server.messages.put(message);
+              Server.messageHistory.add(message);
+            }
+            break;
 
-	public void write(Message msg) throws IOException {
-		System.out.println("Message: "+msg.getContent().toString()+" sent to clients");
-		out.writeObject(msg);
-		out.flush();
-	}
+          } catch (IOException | ClassNotFoundException | InterruptedException e) {
+            System.out.println(e.getMessage());
+          }
+        }
+      }
 
+    };
+
+    read.start();
+
+  }
+
+  public void write(Message msg) throws IOException {
+    System.out.println("Message: " + msg.getContent().toString() + " sent to clients");
+    out.writeObject(msg);
+    out.flush();
+  }
 
 }
