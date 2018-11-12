@@ -3,77 +3,94 @@ package p2p;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.util.concurrent.LinkedBlockingQueue;
 
-public class Client {
+public class Client implements Runnable {
 
-	private ConnectionToServer server;
-	public static volatile LinkedBlockingQueue<Object> messages;
 	private Socket socket;
-	protected boolean isRecipient;
+	private String username;
+	ObjectInputStream in = null;
+	ObjectOutputStream out = null;
 
-	public Client(String hostName, int port, String userName, boolean isRecipient) throws IOException {
+	public Client(String hostName, int port, String userName) throws IOException {
 		socket = new Socket(hostName, port);
-		messages = new LinkedBlockingQueue<>();
-		server = new ConnectionToServer(socket, userName);
-		this.isRecipient = isRecipient;
+		this.username = userName;
+	}
 
-		Thread messageHandling = new Thread() {
+	@Override
+	public void run() {
+		
+		
+		BufferedReader systemIn = null;
+		String input = "";
+		
+		try {
+			in = new ObjectInputStream(socket.getInputStream());
+			out = new ObjectOutputStream(socket.getOutputStream());
+			out.writeObject(username); 
+			out.flush();
+			systemIn = new BufferedReader(new InputStreamReader(System.in));
+			
+		} catch (IOException e) {
+			System.out.println(e.getMessage());
+		}
+		
+		Thread read = new Thread() {
+
 			public void run() {
 				while (true) {
 					try {
-
-						Object message = messages.take();
-						System.out.println(message.toString());
-					} catch (InterruptedException e) {
+						System.out.println(in.readObject().toString());
+					} catch (ClassNotFoundException | IOException e) {
+						System.out.println(e.getMessage());
 					}
+					
 				}
+					
 			}
+
 		};
-
-		messageHandling.start();
-	}
-
-	private ConnectionToServer getServer() {
-		return server;
-	}
-
-	private void sendMsg(Object msg) throws IOException {
-		if (isRecipient) {
-			server.write(msg);
-		}else{
-			server.write("Client is not a recipient");
-		}
-	}
-
-	public static void main(String[] args) {
-
-		if (args.length < 1) {
-			System.out.println("Not enough arguments");
-			System.exit(-1);
-		}
-
+		read.start();
+		
+		
 		try {
-			BufferedReader buf = new BufferedReader(new InputStreamReader(System.in));
-			System.out.println("Enter username of client: ");
-			String userName = buf.readLine();
-			Client client1 = new Client(InetAddress.getLocalHost().getHostAddress(), Integer.parseInt(args[0]),
-					userName, true);
-			while (true) {
-				String mess = "";
-
-				System.out.println("Enter user to send to ");
-				mess += buf.readLine();
-				mess += "||";
-				System.out.println("Enter message:  ");
-				mess += userName + ": " + buf.readLine();
-				client1.sendMsg(mess);
+			while ( (input = systemIn.readLine()) != null){
+				
+				out.writeObject(input);
+				out.flush();
+				
 			}
+		} catch (IOException e) {
+			System.out.println(e.getMessage());
+		}
+		finally {
+			try {
+				systemIn.close();
+			} catch (IOException e) {
+				System.out.println(e.getMessage());
+			}
+		}
+		
+		
+
+	}
+
+	public static void main(String[] args) {	
+		try {
+			Client client1 = new Client(InetAddress.getLocalHost().getHostAddress(), 2222,
+					"Darius");
+			Thread t = new Thread(client1);
+			t.start();
+			
+			
 		} catch (NumberFormatException | IOException e) {
 			System.out.println(e.getMessage());
 		}
+
+		
 
 	}
 

@@ -3,75 +3,107 @@ package topic;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.util.LinkedList;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
-public class Client {
+public class Client implements Runnable {
 
-	private ConnectionToServer server;
-	protected static volatile LinkedBlockingQueue<Message> messages;
 	private Socket socket;
-	private MessageTypes type;
+	//private String username;
+	ObjectInputStream in = null;
+	ObjectOutputStream out = null;
+	List<String> topics;
 
-	public Client(String hostName, int port, MessageTypes msgType) throws IOException {
+	public Client(String hostName, int port, List<String> topics) throws IOException {
 		socket = new Socket(hostName, port);
-		messages = new LinkedBlockingQueue<>();
-		server = new ConnectionToServer(socket);
-		this.type = msgType;
+		this.topics = topics;
+	}
 
-		Thread messageHandling = new Thread() {
+	@Override
+	public void run() {
+		
+		
+		BufferedReader systemIn = null;
+		String input = "";
+		
+		try {
+			in = new ObjectInputStream(socket.getInputStream());
+			out = new ObjectOutputStream(socket.getOutputStream());
+			out.writeObject(topics); 
+			out.flush();
+			systemIn = new BufferedReader(new InputStreamReader(System.in));
+			
+		} catch (IOException e) {
+			System.out.println(e.getMessage());
+		}
+		
+		Thread read = new Thread() {
+
 			public void run() {
 				while (true) {
-
 					try {
-						Message message = messages.take();
-						
-						System.out.println(message.getContent().toString());
-					} catch (InterruptedException e) {
-						e.printStackTrace();
+						System.out.println("Message: "+in.readObject().toString()+" had been successfully received");
+					} catch (ClassNotFoundException | IOException e) {
+						System.out.println(e.getMessage());
 					}
-
+					
 				}
+					
 			}
+
 		};
-
-		messageHandling.start();
-	}
-
-	private ConnectionToServer getServer() {
-		return server;
-	}
-
-	private void sendMsg(Message msg) throws IOException, InterruptedException {
-
-		server.write(msg);
-
-	}
-
-	public static void main(String[] args) throws InterruptedException {
-
-		if (args.length < 1) {
-			System.out.println("Not enough arguments");
-			System.exit(-1);
-		}
-
+		read.start();
+		
+		
 		try {
-			BufferedReader buf = new BufferedReader(new InputStreamReader(System.in));
-			Client client1 = new Client(InetAddress.getLocalHost().getHostAddress(), Integer.parseInt(args[0]),
-					MessageTypes.STRING);
-			System.out.println("Enter message:  ");
-			while (true) {
-
-				String msg = "";
-				msg += buf.readLine();
-				Message mess = new Message(msg, MessageTypes.STRING, 6000);
-				client1.sendMsg(mess);
+			while ( (input = systemIn.readLine()) != null){
+				
+				//TODO message has to be written in the form header:content
+				//split message , crate topic object and sent on the stream
+				
+				String[] splits = input.split(":");
+				Topic t = new Topic(splits[0], splits[1],30000);
+				out.writeObject(t);
+				out.flush();
+				
 			}
+		} catch (IOException e) {
+			System.out.println(e.getMessage());
+		}
+		finally {
+			try {
+				systemIn.close();
+			} catch (IOException e) {
+				System.out.println(e.getMessage());
+			}
+		}
+		
+		
+
+	}
+
+	public static void main(String[] args) {	
+		try {
+			List<String> topic = new ArrayList<String>();
+			topic.add("Nature");
+//			topic.add("Food");
+			topic.add("School");
+			Client client1 = new Client(InetAddress.getLocalHost().getHostAddress(), 2222,
+					topic);
+			Thread t = new Thread(client1);
+			t.start();
+			
+			
 		} catch (NumberFormatException | IOException e) {
 			System.out.println(e.getMessage());
 		}
+
+		
 
 	}
 
